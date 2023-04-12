@@ -203,7 +203,7 @@ public class App {
     // funktion return string antwort
     public static String getAnswer(String question) {
         OpenAiService service = new OpenAiService(
-                "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");
+                "sk-fmVPU3kT3Bgb7rcLTOKENHEREGkNENQk");
 
         System.out.println("\nCreating completion... ");
         final CompletionRequest completionRequest = CompletionRequest.builder()
