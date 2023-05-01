@@ -1,5 +1,8 @@
 package com.blackn0va;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Random;
 
 import com.github.theholywaffle.teamspeak3.TS3Api;
@@ -13,8 +16,12 @@ import com.github.theholywaffle.teamspeak3.api.event.TS3EventType;
 import com.github.theholywaffle.teamspeak3.api.event.TextMessageEvent;
 import com.github.theholywaffle.teamspeak3.api.reconnect.ConnectionHandler;
 import com.github.theholywaffle.teamspeak3.api.reconnect.ReconnectStrategy;
-import com.theokanning.openai.OpenAiService;
-import com.theokanning.openai.completion.CompletionRequest;
+ import com.theokanning.openai.completion.CompletionRequest;
+import com.theokanning.openai.completion.chat.ChatCompletionRequest;
+import com.theokanning.openai.completion.chat.ChatMessage;
+import com.theokanning.openai.completion.chat.ChatMessageRole;
+import com.theokanning.openai.service.OpenAiService;
+
 
 public class App {
     public static int ClientIDBlack = 0;
@@ -25,6 +32,7 @@ public class App {
 
     public static final TS3Config config = new TS3Config();
     private static volatile int clientId;
+    public static final List<ChatMessage> messages = new ArrayList<>();
 
     public static void main(String[] args) {
 
@@ -125,13 +133,13 @@ public class App {
             GenerateNickname(randomName);
             // Logging in, selecting the virtual server, selecting a channel
             // and setting a nickname needs to be done every time we reconnect
-            api.login("OpenAIBot", "QueryPassword");
+            api.login("test", "d4rz");
             api.selectVirtualServerById(1);
 
             // api.moveQuery(x);
             api.setNickname(randomName);
 
-            api.moveQuery(415);
+            api.moveQuery(412);
 
             // What events we listen to also resets
             // api.registerEvent(TS3EventType.TEXT_CHANNEL, 415);
@@ -151,12 +159,21 @@ public class App {
                 @Override
                 public void onTextMessage(TextMessageEvent e) {
 
+    
+                    
                     // if message is private then send message to user who send the message
                     if (e.getTargetMode() == TextMessageTargetMode.CLIENT) {
                         if (!e.getInvokerName().contains("Bot")) {
 
+                            String frage = e.getMessage();
+
+                            final ChatMessage systemMessage = new ChatMessage(ChatMessageRole.USER.value(), frage);
+
+                            messages.add(systemMessage);
+
+
                             // call get answer and return answer
-                            answer = getAnswer(e.getMessage());
+                            answer = getAnswer(frage);
 
                             // api.sendChannelMessage(answer);
                             api.sendPrivateMessage(e.getInvokerId(), answer);
@@ -164,9 +181,19 @@ public class App {
                         }
                     } else {
                         if (!e.getInvokerName().contains("Bot")) {
-                            // call get answer and return answer
-                            answer = getAnswer(e.getMessage());
+                            String frage = e.getMessage();
 
+                            final ChatMessage systemMessage = new ChatMessage(ChatMessageRole.USER.value(), frage);
+
+                            messages.add(systemMessage);
+
+
+                            // call get answer and return answer
+                            answer = getAnswer(frage);
+
+                            // api.sendChannelMessage(answer);
+                            api.sendPrivateMessage(e.getInvokerId(), answer);
+                            System.out.println(answer);
                             api.sendChannelMessage(answer);
                             System.out.println(answer);
                         }
@@ -202,35 +229,47 @@ public class App {
 
     // funktion return string antwort
     public static String getAnswer(String question) {
-        OpenAiService service = new OpenAiService(
-                "sk-fmVPU3kT3Bgb7rcLTOKENHEREGkNENQk");
+        try
+        {
+            OpenAiService service = new OpenAiService("sk-pJQ9H7UHKpAPI_Keyu");
 
-        System.out.println("\nCreating completion... ");
-        final CompletionRequest completionRequest = CompletionRequest.builder()
-                .model("text-davinci-003")
-                .prompt(question)
-                .maxTokens(150)
-                .temperature(0.5)
-                .topP(0.3)
-                .frequencyPenalty(0.5)
-                .presencePenalty(0.0)
-                .echo(true)
-                .build();
+ 
 
-        // String answer =
-        // service.createCompletion(completionRequest).getChoices(completionResponse ->
-        // completionResponse.getChoices().toString().replace("[CompletionChoice(text=",
-        // "").replace(", index=)]", "").replace(", logprobs=", "").replace(",
-        // finish_reason=", "").replace(", index=0nullstop)", "").replace("]", ""));
+            System.out.println("\nCreating completion... ");
+            ChatCompletionRequest chatCompletionRequest = ChatCompletionRequest
+            .builder()
+            .model("gpt-3.5-turbo")
+            .temperature(0.5)
+            .presencePenalty(0.0)
+            .frequencyPenalty(0.5)
+            .messages(messages)
+            .n(1)
+            .maxTokens(200)
+            .logitBias(new HashMap<>())
+            .build();
+            // String answer =
+            // service.createCompletion(completionRequest).getChoices(completionResponse ->
+            // completionResponse.getChoices().toString().replace("[CompletionChoice(text=",
+            // "").replace(", index=)]", "").replace(", logprobs=", "").replace(",
+            // finish_reason=", "").replace(", index=0nullstop)", "").replace("]", ""));
+    
+            // service.createCompletion(completionRequest).getChoices().forEach(System.out::print);
+            answer = service.createChatCompletion(chatCompletionRequest).getChoices().toString()
+                    .replace("[CompletionChoice(text=", "").replace(", index=)]", "")
+                    .replace(", logprobs=", "").replace(", finish_reason=", "")
+                    .replace(", index=0nullstop)", "").replace("]", "")
+                    .replace("index=0nulllength)", "")
+                    .replace("[ChatCompletionChoice(index=0, message=ChatMessage(role=assistant, content=", "")
+                    .replace("), finishReason=stop)", "");
+    
+            return answer;
+        }
+        catch (Exception e)
+        {
 
-        // service.createCompletion(completionRequest).getChoices().forEach(System.out::print);
-        answer = service.createCompletion(completionRequest).getChoices().toString()
-                .replace("[CompletionChoice(text=", "").replace(", index=)]", "")
-                .replace(", logprobs=", "").replace(", finish_reason=", "")
-                .replace(", index=0nullstop)", "").replace("]", "")
-                .replace("index=0nulllength)", "");
-
+        }
         return answer;
+
     }
 
     private static void stuffThatOnlyEverNeedsToBeRunOnce(final TS3Api api) {
